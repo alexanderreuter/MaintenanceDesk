@@ -11,5 +11,7 @@ public class TechnicianConfiguration : IEntityTypeConfiguration<Technician>
         builder.Property(t => t.FullName).HasMaxLength(200);
         builder.Property(t => t.Email).HasMaxLength(254);
         builder.Property(t => t.Trade).HasMaxLength(100);
+
+        builder.HasData(SeedData.Technicians);
     }
 }

@@ -12,5 +12,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.StreetAddress).HasMaxLength(200);
         builder.Property(p => p.PostalCode).HasMaxLength(20);
         builder.Property(p => p.City).HasMaxLength(100);
+
+        builder.HasData(SeedData.Properties);
     }
 }

@@ -17,5 +17,7 @@ public class ResidentConfiguration : IEntityTypeConfiguration<Resident>
             .WithMany()
             .HasForeignKey(r => r.UnitId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasData(SeedData.Residents);
     }
 }

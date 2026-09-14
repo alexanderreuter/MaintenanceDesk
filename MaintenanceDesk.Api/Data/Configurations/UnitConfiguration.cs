@@ -17,5 +17,7 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
 
         // A designation like "1201" is only unique within its own property.
         builder.HasIndex(u => new { u.PropertyId, u.Designation }).IsUnique();
+
+        builder.HasData(SeedData.Units);
     }
 }

@@ -4,6 +4,7 @@ using MaintenanceDesk.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MaintenanceDesk.Api.Data.Migrations
 {
     [DbContext(typeof(MaintenanceDeskDbContext))]
-    partial class MaintenanceDeskDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914165224_SeedReferenceData")]
+    partial class SeedReferenceData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
