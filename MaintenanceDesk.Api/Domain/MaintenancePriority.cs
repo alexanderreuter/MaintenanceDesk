@@ -1,9 +1,5 @@
 namespace MaintenanceDesk.Api.Domain;
 
-/// <summary>
-/// How urgent a maintenance request is. The response deadline is derived from
-/// this when the request is created.
-/// </summary>
 public enum MaintenancePriority
 {
     Low = 1,

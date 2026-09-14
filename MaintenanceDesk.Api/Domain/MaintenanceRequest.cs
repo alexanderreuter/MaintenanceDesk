@@ -1,9 +1,5 @@
 namespace MaintenanceDesk.Api.Domain;
 
-/// <summary>
-/// An issue a resident has reported against their unit, worked to resolution
-/// against a response deadline. The only entity with an HTTP surface.
-/// </summary>
 public class MaintenanceRequest
 {
     public Guid Id { get; set; }
@@ -23,13 +19,11 @@ public class MaintenanceRequest
     public MaintenanceStatus Status { get; set; }
 
     /// <summary>
-    /// When the resident submitted the request. Set on create.
-    /// </summary>
-    /// <remarks>
+    /// When the resident submitted the request. Set on create. 
     /// DateTimeOffset rather than DateTime throughout: this runs in Azure
     /// later, where the host's local time is not the reader's, and an instant
     /// without an offset is ambiguous.
-    /// </remarks>
+    /// </summary>
     public DateTimeOffset ReportedAt { get; set; }
 
     /// <summary>
@@ -38,18 +32,9 @@ public class MaintenanceRequest
     /// </summary>
     public DateTimeOffset ResponseDeadline { get; set; }
 
-    /// <summary>
-    /// Null until the request reaches Assigned.
-    /// </summary>
     public Guid? AssignedTechnicianId { get; set; }
 
-    /// <summary>
-    /// Null until the request reaches Resolved.
-    /// </summary>
     public DateTimeOffset? ResolvedAt { get; set; }
 
-    /// <summary>
-    /// What was done to fix the issue. Null until the request is resolved.
-    /// </summary>
     public string? ResolutionNotes { get; set; }
 }
