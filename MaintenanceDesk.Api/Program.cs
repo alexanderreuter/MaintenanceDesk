@@ -1,4 +1,5 @@
 using MaintenanceDesk.Api.Data;
+using MaintenanceDesk.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,9 @@ var connectionString = builder.Configuration.GetConnectionString("MaintenanceDes
     ?? throw new InvalidOperationException("Connection string 'MaintenanceDesk' is not configured.");
 
 builder.Services.AddDbContext<MaintenanceDeskDbContext>(options => options.UseSqlServer(connectionString));
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<MaintenanceRequestService>();
 
 var app = builder.Build();
 
