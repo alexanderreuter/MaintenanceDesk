@@ -37,6 +37,22 @@ Content-Type: application/json
   "technicianId": "{{johanBergPlumber}}"
 }
 
+### FAILS: status cannot go backwards -> 409
+PATCH {{host}}/api/maintenance-requests/{{create.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "Submitted"
+}
+
+### FAILS: Assigned is reached by assigning, not through /status -> 409
+PATCH {{host}}/api/maintenance-requests/{{create.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "Assigned"
+}
+
 ### FAILS: missing title, category given as a number -> 400
 POST {{host}}/api/maintenance-requests
 Content-Type: application/json

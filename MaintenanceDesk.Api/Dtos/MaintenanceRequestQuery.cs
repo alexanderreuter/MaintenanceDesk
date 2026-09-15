@@ -10,7 +10,7 @@ public record MaintenanceRequestQuery
 
     public MaintenancePriority? Priority { get; init; }
 
-    // Upper bound keeps (Page - 1) * PageSize from overflowing an int.
+    // Keep int from overflowing 
     [Range(1, int.MaxValue / MaintenanceRequestService.MaxPageSize)]
     public int Page { get; init; } = 1;
 

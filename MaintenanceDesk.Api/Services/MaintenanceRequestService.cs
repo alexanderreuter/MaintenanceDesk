@@ -111,7 +111,10 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
             return RequestResult.NotFound($"Maintenance request '{id}' does not exist.");
         }
 
-        // TODO (task 6): return Conflict for transitions the status flow does not allow.
+        if (!MaintenanceStatusTransitions.CanChangeStatus(request.Status, newStatus))
+        {
+            return RequestResult.Conflict(DescribeRejectedStatusChange(request.Status, newStatus));
+        }
 
         request.Status = newStatus;
 
@@ -119,6 +122,12 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
         {
             request.ResolvedAt = timeProvider.GetUtcNow();
             request.ResolutionNotes = resolutionNotes;
+        }
+        else if (newStatus != MaintenanceStatus.Closed)
+        {
+            // Resolution details only exist while resolved or closed; reopening clears them.
+            request.ResolvedAt = null;
+            request.ResolutionNotes = null;
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -138,6 +147,13 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
             return RequestResult.NotFound($"Maintenance request '{id}' does not exist.");
         }
 
+        if (!MaintenanceStatusTransitions.CanAssign(request.Status))
+        {
+            return RequestResult.Conflict(request.Status == MaintenanceStatus.Submitted
+                ? "Triage the request before assigning a technician."
+                : $"A request that is {request.Status} cannot be assigned a technician.");
+        }
+
         var technicianExists = await db.Technicians.AnyAsync(t => t.Id == technicianId, cancellationToken);
 
         if (!technicianExists)
@@ -145,11 +161,9 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
             return RequestResult.Invalid($"Technician '{technicianId}' does not exist.");
         }
 
-        // TODO (task 6): return Conflict when the request's status does not allow assignment.
-
         request.AssignedTechnicianId = technicianId;
 
-        // First assignment moves the request along; reassigning later leaves the status alone.
+        // First assignment moves the request along; reassigning leaves the status alone.
         if (request.Status == MaintenanceStatus.Triaged)
         {
             request.Status = MaintenanceStatus.Assigned;
@@ -158,5 +172,19 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
         await db.SaveChangesAsync(cancellationToken);
 
         return RequestResult.Success(request);
+    }
+
+    private static string DescribeRejectedStatusChange(MaintenanceStatus from, MaintenanceStatus to)
+    {
+        if (to == MaintenanceStatus.Assigned)
+        {
+            return "A request becomes Assigned by assigning a technician, not by changing its status.";
+        }
+
+        var allowed = MaintenanceStatusTransitions.AllowedNextStatuses(from);
+
+        return allowed.Count == 0
+            ? $"Cannot change status from {from} to {to}. {from} is a final status."
+            : $"Cannot change status from {from} to {to}. Allowed from {from}: {string.Join(", ", allowed)}.";
     }
 }
