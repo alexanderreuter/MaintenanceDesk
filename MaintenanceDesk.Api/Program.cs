@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MaintenanceDesk.Api.Data;
 using MaintenanceDesk.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -6,8 +7,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+var enumsAsNames = new JsonStringEnumConverter(allowIntegerValues: false);
+
+builder.Services.AddControllers(options =>
+    {
+        // Every DTO field states [Required] explicitly; the implicit rule only adds a misleading
+        // "The dto field is required." next to the real error when a body can't be parsed.
+        options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+    })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(enumsAsNames);
+        options.AllowInputFormatterExceptionMessages = false;
+    });
+
+// The OpenAPI options
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(enumsAsNames));
 builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("MaintenanceDesk")

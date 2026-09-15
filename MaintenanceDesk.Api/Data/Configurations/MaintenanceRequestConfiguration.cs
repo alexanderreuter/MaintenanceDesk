@@ -12,8 +12,8 @@ public class MaintenanceRequestConfiguration : IEntityTypeConfiguration<Maintena
         builder.Property(r => r.Description).HasMaxLength(2000);
         builder.Property(r => r.ResolutionNotes).HasMaxLength(2000);
 
-        // Restrict rather than cascade: request history must outlive what it refers to,
-        // and SQL Server rejects the two cascade paths from Unit (direct, and via Resident).
+        // Restrict rather than cascade: request history must outlive what it refers to
+        // + SQL Server rejects the two cascade paths from Unit (direct, and via Resident).
         builder.HasOne<Unit>()
             .WithMany()
             .HasForeignKey(r => r.UnitId)

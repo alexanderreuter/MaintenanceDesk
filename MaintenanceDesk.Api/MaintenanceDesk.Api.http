@@ -1,6 +1,67 @@
-@MaintenanceDesk.Api_HostAddress = http://localhost:5036
+@host = http://localhost:5036
+@annaLindqvist = 30000000-0000-0000-0000-000000000001
+@johanBergPlumber = 40000000-0000-0000-0000-000000000001
 
-GET {{MaintenanceDesk.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Create a request: Anna Lindqvist, Tallbacken 1101 -> 201
+# @name create
+POST {{host}}/api/maintenance-requests
+Content-Type: application/json
 
-###
+{
+  "residentId": "{{annaLindqvist}}",
+  "title": "Kitchen tap leaking",
+  "description": "Water drips from the base of the kitchen tap even when it is fully closed.",
+  "category": "Plumbing",
+  "priority": "Normal"
+}
+
+### Get it back -> 200
+GET {{host}}/api/maintenance-requests/{{create.response.body.$.id}}
+
+### List submitted requests, first page -> 200
+GET {{host}}/api/maintenance-requests?status=Submitted&page=1&pageSize=20
+
+### Triage it -> 200
+PATCH {{host}}/api/maintenance-requests/{{create.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "Triaged"
+}
+
+### Assign Johan Berg, plumber -> 200, status becomes Assigned
+PATCH {{host}}/api/maintenance-requests/{{create.response.body.$.id}}/assignment
+Content-Type: application/json
+
+{
+  "technicianId": "{{johanBergPlumber}}"
+}
+
+### FAILS: missing title, category given as a number -> 400
+POST {{host}}/api/maintenance-requests
+Content-Type: application/json
+
+{
+  "residentId": "{{annaLindqvist}}",
+  "description": "No title, and a number where a category name belongs.",
+  "category": 1,
+  "priority": "Normal"
+}
+
+### FAILS: resident does not exist -> 400
+POST {{host}}/api/maintenance-requests
+Content-Type: application/json
+
+{
+  "residentId": "30000000-0000-0000-0000-000000000099",
+  "title": "Nobody lives here",
+  "description": "This resident id is not seeded.",
+  "category": "Other",
+  "priority": "Low"
+}
+
+### FAILS: request does not exist -> 404
+GET {{host}}/api/maintenance-requests/00000000-0000-0000-0000-000000000000
+
+### FAILS: page size above the maximum -> 400
+GET {{host}}/api/maintenance-requests?pageSize=500
