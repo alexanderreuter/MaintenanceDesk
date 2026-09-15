@@ -33,6 +33,9 @@ builder.Services.AddDbContext<MaintenanceDeskDbContext>(options => options.UseSq
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MaintenanceRequestService>();
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<MaintenanceDeskDbContext>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -46,5 +49,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
