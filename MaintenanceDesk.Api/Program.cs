@@ -1,9 +1,16 @@
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using MaintenanceDesk.Api.Data;
 using MaintenanceDesk.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Only set in Azure
+if (builder.Configuration["KeyVault:Uri"] is { Length: > 0 } keyVaultUri)
+{
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
 
 // Add services to the container.
 
