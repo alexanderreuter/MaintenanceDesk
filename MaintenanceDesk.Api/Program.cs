@@ -28,7 +28,9 @@ builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("MaintenanceDesk")
     ?? throw new InvalidOperationException("Connection string 'MaintenanceDesk' is not configured.");
 
-builder.Services.AddDbContext<MaintenanceDeskDbContext>(options => options.UseSqlServer(connectionString));
+// Azure SQL refuses connections while resuming from auto-pause and during maintenance, retry those instead of failing.
+builder.Services.AddDbContext<MaintenanceDeskDbContext>(options =>
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MaintenanceRequestService>();
