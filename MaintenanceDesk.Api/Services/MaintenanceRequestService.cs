@@ -1,11 +1,16 @@
 using MaintenanceDesk.Api.Data;
 using MaintenanceDesk.Api.Domain;
+using MaintenanceDesk.Api.Events;
 using Microsoft.EntityFrameworkCore;
 using RequestResult = MaintenanceDesk.Api.Services.ServiceResult<MaintenanceDesk.Api.Domain.MaintenanceRequest>;
 
 namespace MaintenanceDesk.Api.Services;
 
-public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider timeProvider)
+public class MaintenanceRequestService(
+    MaintenanceDeskDbContext db,
+    TimeProvider timeProvider,
+    IEventPublisher events,
+    ILogger<MaintenanceRequestService> logger)
 {
     public const int MaxPageSize = 100;
 
@@ -55,6 +60,11 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
 
         db.MaintenanceRequests.Add(request);
         await db.SaveChangesAsync(cancellationToken);
+
+        await PublishAsync(new MaintenanceRequestEvent(request.Id, MaintenanceRequestEventType.Created, now));
+        await PublishAsync(
+            new MaintenanceRequestEvent(request.Id, MaintenanceRequestEventType.DeadlineReached, request.ResponseDeadline),
+            deliverAt: request.ResponseDeadline);
 
         return RequestResult.Success(request);
     }
@@ -132,6 +142,8 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
 
         await db.SaveChangesAsync(cancellationToken);
 
+        await PublishAsync(new MaintenanceRequestEvent(request.Id, MaintenanceRequestEventType.StatusChanged, timeProvider.GetUtcNow()));
+
         return RequestResult.Success(request);
     }
 
@@ -164,14 +176,41 @@ public class MaintenanceRequestService(MaintenanceDeskDbContext db, TimeProvider
         request.AssignedTechnicianId = technicianId;
 
         // First assignment moves the request along; reassigning leaves the status alone.
-        if (request.Status == MaintenanceStatus.Triaged)
+        var statusChanged = request.Status == MaintenanceStatus.Triaged;
+        if (statusChanged)
         {
             request.Status = MaintenanceStatus.Assigned;
         }
 
         await db.SaveChangesAsync(cancellationToken);
 
+        if (statusChanged)
+        {
+            await PublishAsync(new MaintenanceRequestEvent(request.Id, MaintenanceRequestEventType.StatusChanged, timeProvider.GetUtcNow()));
+        }
+
         return RequestResult.Success(request);
+    }
+
+    // The change is already saved, so a failed publish is logged rather than failing (and inviting a duplicate retry).
+    // Closing this gap properly takes a transactional outbox. No request token, event should go out even if the client left.
+    private async Task PublishAsync(MaintenanceRequestEvent @event, DateTimeOffset? deliverAt = null)
+    {
+        try
+        {
+            if (deliverAt is null)
+            {
+                await events.PublishAsync(@event);
+            }
+            else
+            {
+                await events.ScheduleAsync(@event, deliverAt.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish {EventType} for maintenance request {RequestId}.", @event.Type, @event.RequestId);
+        }
     }
 
     private static string DescribeRejectedStatusChange(MaintenanceStatus from, MaintenanceStatus to)

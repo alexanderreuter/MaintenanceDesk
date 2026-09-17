@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using MaintenanceDesk.Api.Data;
+using MaintenanceDesk.Api.Events;
 using MaintenanceDesk.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +43,20 @@ builder.Services.AddDbContext<MaintenanceDeskDbContext>(options =>
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MaintenanceRequestService>();
+
+// Only set in Azure, without it events go nowhere, so local runs and tests need no Service Bus.
+if (builder.Configuration["ServiceBus:Namespace"] is { Length: > 0 } serviceBusNamespace)
+{
+    var queueName = builder.Configuration["ServiceBus:QueueName"] ?? "maintenance-request-events";
+
+    builder.Services.AddSingleton(_ => new ServiceBusClient(serviceBusNamespace, new DefaultAzureCredential()));
+    builder.Services.AddSingleton(services => services.GetRequiredService<ServiceBusClient>().CreateSender(queueName));
+    builder.Services.AddSingleton<IEventPublisher, ServiceBusEventPublisher>();
+}
+else
+{
+    builder.Services.AddSingleton<IEventPublisher, NullEventPublisher>();
+}
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<MaintenanceDeskDbContext>();
