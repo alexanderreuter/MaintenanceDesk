@@ -39,7 +39,10 @@ var connectionString = builder.Configuration.GetConnectionString("MaintenanceDes
 
 // Azure SQL refuses connections while resuming from auto-pause and during maintenance, retry those instead of failing.
 builder.Services.AddDbContext<MaintenanceDeskDbContext>(options =>
-    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(
+        maxRetryCount: 6,
+        maxRetryDelay: TimeSpan.FromSeconds(30),
+        errorNumbersToAdd: [-2])));
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MaintenanceRequestService>();
