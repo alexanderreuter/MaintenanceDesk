@@ -13,3 +13,5 @@ resource "azurerm_resource_group" "main" {
   location = local.location
   tags     = local.tags
 }
+# The tenant and the object id of whoever runs Terraform, for Key Vault and role assignments.
+data "azurerm_client_config" "current" {}
