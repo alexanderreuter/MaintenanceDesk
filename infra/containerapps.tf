@@ -97,3 +97,71 @@ resource "azurerm_container_app" "api" {
 
   depends_on = [azurerm_role_assignment.api_acr_pull]
 }
+
+resource "azurerm_container_app" "worker" {
+  name                         = "ca-maintenancedesk-worker"
+  resource_group_name          = azurerm_resource_group.main.name
+  container_app_environment_id = azurerm_container_app_environment.main.id
+
+  revision_mode         = "Single"
+  workload_profile_name = "Consumption"
+
+  tags = local.tags
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.worker.id]
+  }
+
+  registry {
+    server   = azurerm_container_registry.main.login_server
+    identity = azurerm_user_assigned_identity.worker.id
+  }
+
+  template {
+    min_replicas = 0
+    max_replicas = 1
+
+    container {
+      name = "worker"
+
+      image = "mcr.microsoft.com/k8se/quickstart:latest"
+
+      cpu    = 0.25
+      memory = "0.5Gi"
+
+      env {
+        name  = "ServiceBus__Namespace"
+        value = "${azurerm_servicebus_namespace.main.name}.servicebus.windows.net"
+      }
+
+      env {
+        name  = "Api__BaseUrl"
+        value = "http://${azurerm_container_app.api.name}"
+      }
+
+      env {
+        name  = "AZURE_CLIENT_ID"
+        value = azurerm_user_assigned_identity.worker.client_id
+      }
+    }
+
+    custom_scale_rule {
+      name             = "queue-depth"
+      custom_rule_type = "azure-servicebus"
+      identity_id      = azurerm_user_assigned_identity.worker.id
+
+      metadata = {
+        namespace    = azurerm_servicebus_namespace.main.name
+        queueName    = azurerm_servicebus_queue.events.name
+        messageCount = "1"
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].container[0].image]
+  }
+
+  depends_on = [azurerm_role_assignment.worker_acr_pull]
+}
