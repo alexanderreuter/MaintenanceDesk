@@ -10,6 +10,11 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.9"
     }
+    # For Azure features azurerm has not implemented, currently only the Azure SQL free offer.
+    azapi = {
+      source  = "azure/azapi"
+      version = "~> 2.12"
+    }
   }
 
   backend "azurerm" {
