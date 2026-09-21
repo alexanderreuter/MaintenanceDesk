@@ -18,30 +18,34 @@ resource "azurerm_mssql_server" "main" {
   tags                          = local.tags
 }
 
-resource "azurerm_mssql_database" "main" {
-  name                        = "sqldb-maintenancedesk"
-  server_id                   = azurerm_mssql_server.main.id
-  sku_name                    = "GP_S_Gen5_2"
-  min_capacity                = 0.5
-  auto_pause_delay_in_minutes = 60
-  max_size_gb                 = 32
-  storage_account_type        = "Local"
-  collation                   = "SQL_Latin1_General_CP1_CI_AS"
-  zone_redundant              = false
-  tags                        = local.tags
-}
 
-# The free offer is not in azurerm yet, so patch it straight onto the resource.
-resource "azapi_update_resource" "sql_free_limit" {
-  type        = "Microsoft.Sql/servers/databases@2025-01-01"
-  resource_id = azurerm_mssql_database.main.id
+resource "azapi_resource" "database" {
+  type      = "Microsoft.Sql/servers/databases@2025-01-01"
+  name      = "sqldb-maintenancedesk"
+  parent_id = azurerm_mssql_server.main.id
+  location  = azurerm_resource_group.main.location
+  tags      = local.tags
 
   body = {
+    sku = {
+      name     = "GP_S_Gen5"
+      tier     = "GeneralPurpose"
+      family   = "Gen5"
+      capacity = 2
+    }
     properties = {
+      collation                        = "SQL_Latin1_General_CP1_CI_AS"
+      maxSizeBytes                     = 34359738368
+      minCapacity                      = 0.5
+      autoPauseDelay                   = 60
+      zoneRedundant                    = false
+      requestedBackupStorageRedundancy = "Local"
+
       useFreeLimit                = true
       freeLimitExhaustionBehavior = "AutoPause"
     }
   }
+
 }
 
 # 0.0.0.0 to 0.0.0.0 is Azure's marker for "allow Azure services", not a real address range.
