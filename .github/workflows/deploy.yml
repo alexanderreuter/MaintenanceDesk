@@ -55,6 +55,8 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Build the migration bundle
+        env:
+          ConnectionStrings__MaintenanceDesk: Server=design-time;Database=MaintenanceDesk;
         run: |
           dotnet restore MaintenanceDesk.Api/MaintenanceDesk.Api.csproj --runtime linux-x64
           dotnet tool install --global dotnet-ef --version 10.0.12
