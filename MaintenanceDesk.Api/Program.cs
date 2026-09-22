@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Azure.Identity;
 using Azure.Messaging.ServiceBus;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using MaintenanceDesk.Api.Data;
 using MaintenanceDesk.Api.Events;
 using MaintenanceDesk.Api.Services;
@@ -12,6 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 if (builder.Configuration["KeyVault:Uri"] is { Length: > 0 } keyVaultUri)
 {
     builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
+
+// Only set in Azure.
+if (builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"] is { Length: > 0 })
+{
+    builder.Services.AddOpenTelemetry().UseAzureMonitor();
 }
 
 // Add services to the container.
