@@ -56,6 +56,7 @@ jobs:
 
       - name: Build the migration bundle
         run: |
+          dotnet restore MaintenanceDesk.Api/MaintenanceDesk.Api.csproj
           dotnet tool install --global dotnet-ef --version 10.0.12
           dotnet ef migrations bundle \
             --project MaintenanceDesk.Api \
