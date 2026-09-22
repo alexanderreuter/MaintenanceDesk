@@ -7,6 +7,8 @@ using MaintenanceDesk.Api.Events;
 using MaintenanceDesk.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
+AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Only set in Azure
