@@ -71,7 +71,7 @@ jobs:
           CONN=$(az keyvault secret show --vault-name "$VAULT" \
             --name "ConnectionStrings--MaintenanceDesk" --query value -o tsv)
           echo "::add-mask::$CONN"
-          "$RUNNER_TEMP/efbundle" --connection "$CONN"
+          ConnectionStrings__MaintenanceDesk="$CONN" "$RUNNER_TEMP/efbundle" --connection "$CONN"
 
       - name: Deploy the container apps
         env:
