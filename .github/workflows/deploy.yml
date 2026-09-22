@@ -1,0 +1,94 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-maintenancedesk-dev
+  REGISTRY: crmaintenancedesk
+  VAULT: kv-maintenancedesk
+  API_APP: ca-maintenancedesk-api
+  WORKER_APP: ca-maintenancedesk-worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag from the commit
+        id: tag
+        run: echo "value=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Allow extension installs
+        run: az config set extension.use_dynamic_install=yes_without_prompt
+
+      - name: Build and push images
+        env:
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          az acr login --name "$REGISTRY"
+          docker build -t "$REGISTRY.azurecr.io/maintenancedesk-api:$TAG"    -f MaintenanceDesk.Api/Dockerfile .
+          docker build -t "$REGISTRY.azurecr.io/maintenancedesk-worker:$TAG" -f MaintenanceDesk.Worker/Dockerfile .
+          docker push "$REGISTRY.azurecr.io/maintenancedesk-api:$TAG"
+          docker push "$REGISTRY.azurecr.io/maintenancedesk-worker:$TAG"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build the migration bundle
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.12
+          dotnet ef migrations bundle \
+            --project MaintenanceDesk.Api \
+            --configuration Release \
+            --self-contained --runtime linux-x64 \
+            --output "$RUNNER_TEMP/efbundle" --force
+
+      - name: Apply migrations
+        run: |
+          CONN=$(az keyvault secret show --vault-name "$VAULT" \
+            --name "ConnectionStrings--MaintenanceDesk" --query value -o tsv)
+          echo "::add-mask::$CONN"
+          "$RUNNER_TEMP/efbundle" --connection "$CONN"
+
+      - name: Deploy the container apps
+        env:
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          az containerapp update -g "$RESOURCE_GROUP" -n "$API_APP" \
+            --image "$REGISTRY.azurecr.io/maintenancedesk-api:$TAG"
+          az containerapp update -g "$RESOURCE_GROUP" -n "$WORKER_APP" \
+            --image "$REGISTRY.azurecr.io/maintenancedesk-worker:$TAG"
+
+      - name: Smoke test
+        run: |
+          FQDN=$(az containerapp show -g "$RESOURCE_GROUP" -n "$API_APP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "checking https://$FQDN/health"
+          for attempt in $(seq 1 10); do
+            body=$(curl -sS -m 90 "https://$FQDN/health" || true)
+            echo "attempt $attempt: ${body:-<no response>}"
+            if [ "$body" = "Healthy" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "never became healthy"
+          exit 1
