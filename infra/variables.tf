@@ -3,3 +3,9 @@ variable "client_ip_address" {
   type        = string
   default     = null
 }
+
+variable "github_principal_id" {
+  description = "Object id of the maintenancedesk-github service principal, created by hand outside Terraform. az ad sp show --id <appId> --query id -o tsv"
+  type        = string
+  default     = null
+}
