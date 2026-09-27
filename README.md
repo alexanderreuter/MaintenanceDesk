@@ -6,7 +6,7 @@ to resolution against a response deadline.
 
 ## Purpose
 
-I built it to learn Azure and cloud infrastructure properly. Its built the way a production service would be, hosted in containers, deployed by a pipeline, holding no
+I built it to learn Azure and cloud infrastructure properly. It is built the way a production service would be, hosted in containers, deployed by a pipeline, holding no
 passwords, defined entirely in code, and cheap enough to leave running.
 
 Maintenance requests are the domain because the workflow resembles the case management
